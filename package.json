@@ -23,5 +23,8 @@
     "vite": "^4.5.3",
     "vite-plugin-static-copy": "^0.15.0",
     "vite-plugin-zip-pack": "^1.2.3"
+  },
+  "dependencies": {
+    "@llej/js_util":"github:2234839/ts-util"
   }
 }
