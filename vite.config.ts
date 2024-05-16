@@ -120,9 +120,9 @@ export default defineConfig({
                     }
                     return assetInfo.name!
                 },
+
                 sourcemapBaseUrl:`http://localhost:6806/plugins/${pluginJSON.name}/`,
                 sourcemapPathTransform:(sourcePath) => {
-                    console.log('[sourcePath]',sourcePath)
                     return `${pluginJSON.name}/${sourcePath}`
                 }
             },
