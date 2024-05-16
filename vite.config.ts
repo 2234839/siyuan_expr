@@ -6,10 +6,12 @@ import livereload from "rollup-plugin-livereload"
 import zipPack from "vite-plugin-zip-pack";
 import fg from 'fast-glob';
 
+import pluginJSON from "./plugin.json"
+
 const args = minimist(process.argv.slice(2))
 const isWatch = args.watch || args.w || false
 const devDistDir = "./dev"
-const distDir = isWatch ? devDistDir : "./dist"
+const distDir = isWatch ? devDistDir : "./dev"
 
 console.log("isWatch=>", isWatch)
 console.log("distDir=>", distDir)
@@ -62,7 +64,7 @@ export default defineConfig({
         emptyOutDir: false,
 
         // 构建后是否生成 source map 文件
-        sourcemap: false,
+        sourcemap: true,
 
         // 设置为 false 可以禁用最小化混淆
         // 或是用来指定是应用哪种混淆器
@@ -98,7 +100,7 @@ export default defineConfig({
                         }
                     ] : [
                         zipPack({
-                            inDir: './dist',
+                            inDir: distDir,
                             outDir: './',
                             outFileName: 'package.zip'
                         })
@@ -116,8 +118,13 @@ export default defineConfig({
                     if (assetInfo.name === "style.css") {
                         return "index.css"
                     }
-                    return assetInfo.name
+                    return assetInfo.name!
                 },
+                sourcemapBaseUrl:`http://localhost:6806/plugins/${pluginJSON.name}/`,
+                sourcemapPathTransform:(sourcePath) => {
+                    console.log('[sourcePath]',sourcePath)
+                    return `${pluginJSON.name}/${sourcePath}`
+                }
             },
         },
     }

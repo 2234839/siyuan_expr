@@ -22,7 +22,7 @@ export default class expr extends Plugin {
       name = "custom-expr"
       OR
       (name = "bookmark" AND VALUE ="expr")`);
-    console.log("启动", hash_time33("dfadfa"), attr, filterNotInitBlock(attr));
+    console.log("启动1", hash_time33("dfadfa"), attr, filterNotInitBlock(attr));
   }
   async onunload() {}
 }
