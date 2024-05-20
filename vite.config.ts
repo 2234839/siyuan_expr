@@ -120,7 +120,7 @@ export default defineConfig({
                     }
                     return assetInfo.name!
                 },
-
+                //TODO 这里使用伺服模式有问题，但我不知道如何解决,反正这个功能也基本就开发者使用，就这样吧。
                 sourcemapBaseUrl:`http://localhost:6806/plugins/${pluginJSON.name}/`,
                 sourcemapPathTransform:(sourcePath) => {
                     return `${pluginJSON.name}/${sourcePath}`
