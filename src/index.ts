@@ -7,8 +7,8 @@ const pluginClassName = "expr-plugin";
 const exprName = "custom-expr";
 const exprValueName = "custom-expr-value";
 
-/** 合并了block和attribute，其中attribute的属性key前面添加了`a_` */
 type aliasAttribute = { [K in keyof attribute as `a_${K}`]: attribute[K] };
+/** 合并了block和attribute，其中attribute的属性key前面添加了`a_` */
 type MergedBlock = aliasAttribute & Block;
 
 const dev = console.log;
@@ -40,20 +40,25 @@ async function updateExprEval() {
     /** 只有上一轮求值计算进行完毕后才会开始新一轮计算 */
     return;
   }
-  Expr.evalState = true;
-  const exprAttr: MergedBlock[] = await sql(
-    `SELECT b.*,a.id AS a_id,a."name" AS a_name,a."value" as a_value,a."type" AS a_type,a.block_id AS a_block_id,a.root_id AS a_root_id,a.box AS a_box,a."path" AS a_path
-    FROM blocks AS  b
-    INNER JOIN attributes AS a
-    ON b.id = a.block_id
-    WHERE a.name = "${exprName}"  and CAST(b.updated AS INTEGER)  > ${Expr.updated}
-    ORDER BY b.updated DESC;`,
-  );
-  if (exprAttr.length > 0) {
-    console.log(exprAttr, Expr.updated);
-    exprAttr.forEach(exprEval);
+  try {
+    Expr.evalState = true;
+    const exprAttr: MergedBlock[] = await sql(
+      `SELECT b.*,a.id AS a_id,a."name" AS a_name,a."value" as a_value,a."type" AS a_type,a.block_id AS a_block_id,a.root_id AS a_root_id,a.box AS a_box,a."path" AS a_path
+      FROM blocks AS  b
+      INNER JOIN attributes AS a
+      ON b.id = a.block_id
+      WHERE a.name = "${exprName}" and CAST(b.updated AS INTEGER)  > ${Expr.updated}
+      ORDER BY b.updated DESC;`,
+    );
+    if (exprAttr.length > 0) {
+      console.log(exprAttr, Expr.updated);
+      await Promise.all(exprAttr.map(exprEval));
+    }
+  } catch (error) {
+    dev("求值错误", error);
+  } finally {
+    Expr.evalState = false;
   }
-  Expr.evalState = false;
 }
 
 async function exprEval(block: MergedBlock) {
@@ -88,8 +93,6 @@ async function exprEval(block: MergedBlock) {
   await updateBlock("markdown", String(evalValue + "\n" + newKramdownAttr), block.id);
   dev(newKramdownAttr, Expr.updated);
 }
-
-
 
 async function getBlockByID(blockId: string): Promise<Block> {
   let sqlScript = `select * from blocks where id ='${blockId}'`;
