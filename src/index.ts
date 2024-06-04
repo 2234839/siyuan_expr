@@ -1,5 +1,5 @@
 import { Plugin } from "siyuan";
-import { getBlockKramdown, setBlockAttrs, sql, updateBlock } from "./api";
+import { setBlockAttrs, sql, updateBlock } from "./api";
 import "./index.css";
 
 /** 用于控制插件属性显示 */
@@ -13,10 +13,14 @@ type MergedBlock = aliasAttribute & Block;
 
 const dev = console.log;
 
-export default class expr extends Plugin {
+export default class Expr extends Plugin {
   IntervalId = 0;
+  /** 只更新这个时间戳以后的表达式 */
+  static updated = 0;
+  /** 为 true 代表正在进行求值运算中 */
+  static evalState = false;
   async onload() {
-    // this.IntervalId = setInterval(updateExprEval, 5_000);
+    this.IntervalId = setInterval(updateExprEval, 1_000);
     updateExprEval();
     this.onunloadFn.push(() => clearInterval(this.IntervalId));
 
@@ -32,20 +36,26 @@ export default class expr extends Plugin {
 }
 /** 对最近更新过的表达式进行求值 */
 async function updateExprEval() {
-  // type box = Block & attribute;
+  if (Expr.evalState) {
+    /** 只有上一轮求值计算进行完毕后才会开始新一轮计算 */
+    return;
+  }
+  Expr.evalState = true;
   const exprAttr: MergedBlock[] = await sql(
-    /** 查询所有 'expr' 书签 or name = "custom-expr" 的属性 */
-    // `SELECT * FROM attributes WHERE name = "${exprName}"`,
     `SELECT b.*,a.id AS a_id,a."name" AS a_name,a."value" as a_value,a."type" AS a_type,a.block_id AS a_block_id,a.root_id AS a_root_id,a.box AS a_box,a."path" AS a_path
     FROM blocks AS  b
     INNER JOIN attributes AS a
     ON b.id = a.block_id
-    WHERE a.name = "${exprName}"
+    WHERE a.name = "${exprName}"  and CAST(b.updated AS INTEGER)  > ${Expr.updated}
     ORDER BY b.updated DESC;`,
   );
-  console.log(exprAttr);
-  exprAttr.forEach(exprEval);
+  if (exprAttr.length > 0) {
+    console.log(exprAttr, Expr.updated);
+    exprAttr.forEach(exprEval);
+  }
+  Expr.evalState = false;
 }
+
 async function exprEval(block: MergedBlock) {
   const evalValue = await eval(block.a_value);
   /** 将求值结果存储到属性中 */
@@ -53,12 +63,16 @@ async function exprEval(block: MergedBlock) {
     [exprValueName]: String(evalValue),
   });
 
+  const updated = generateTimestamp();
+  if (Number(updated) > Expr.updated) {
+    Expr.updated = Number(updated);
+  }
   /** 更新块的update时间戳 */
-  const newKramdownAttr = block.ial!.replace(/updated="\d+"/, `updated="${generateTimestamp()}"`);
+  const newKramdownAttr = block.ial!.replace(/updated="\d+"/, `updated="${updated}"`);
 
   /** 将求值结果更新到块文本 */
   await updateBlock("markdown", String(evalValue + "\n" + newKramdownAttr), block.id);
-  dev(newKramdownAttr);
+  dev(newKramdownAttr, Expr.updated);
 }
 
 async function exprBlockInit(block: Block) {
