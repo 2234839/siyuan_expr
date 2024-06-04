@@ -1,9 +1,15 @@
-.oceanpress_widget_button {
-  filter: grayscale(90%);
-  position: absolute;
-  top: 0;
-  left: 15px;
+/* 在伪元素中显示表达式，方便开发 */
+.expr-plugin [custom-expr]::before {
+  content: attr(custom-expr);
+  display: block;
+  background-color: #f0f0f0;
+  padding: 1px;
+  font-family: monospace;
+  font-size: x-small;
 }
-[custom-oceanpress-widget-update] .oceanpress_widget_button {
-  filter: grayscale(0%);
+.expr-plugin [custom-expr-value]::after {
+  content: attr(custom-expr-value);
+  background-color: #d25656;
+  padding: 1px;
+  font-family: monospace;
 }

@@ -1,46 +1,44 @@
 import { Plugin } from "siyuan";
-import { setBlockAttrs, sql } from "./api";
+import { setBlockAttrs, sql, updateBlock } from "./api";
+import "./index.css";
 
+/** 用于控制插件属性显示 */
+const pluginClassName = "expr-plugin";
 const exprName = "custom-expr";
+const exprValueName = "custom-expr-value";
+
+const dev = console.log;
 
 export default class expr extends Plugin {
   IntervalId = 0;
   async onload() {
-    this.IntervalId = setInterval(async () => {
+    this.onunloadFn.push(() => clearInterval(this.IntervalId));
+    const exprAttr: attribute[] = await sql(
       /** 查询所有 'expr' 书签 or name = "custom-expr" 的属性 */
-      const attr: attribute[] = await sql(`
- SELECT * FROM attributes
- WHERE
-   name = "${exprName}"
-   OR
-   (name = "bookmark" AND VALUE ="expr")`);
-      const notInitBlocks = await filterNotInitBlock(attr);
-      notInitBlocks.map(async ({ block_id }) => {
-        exprBlockInit(await getBlockByID(block_id));
-      });
+      `SELECT * FROM attributes WHERE name = "${exprName}"`,
+    );
+    console.log(exprAttr);
+    exprAttr.forEach(exprEval);
 
-      if (notInitBlocks.length > 0) {
-        console.log("未初始化节点", notInitBlocks);
-      }
-    }, 1000);
+    document.body.classList.add(pluginClassName);
+    this.onunloadFn.push(() => document.body.classList.remove(pluginClassName));
   }
+
+  onunloadFn = [] as (() => void)[];
   async onunload() {
-    clearInterval(this.IntervalId);
+    dev("expr plugin unload");
+    this.onunloadFn.forEach((fn) => fn());
   }
 }
-function filterNotInitBlock(attrs: attribute[]) {
-  const idCount: { [block_id: string]: { count: number; attrs: attribute[] } } = {};
-  attrs.forEach(async (attr: attribute) => {
-    if (idCount[attr.block_id] === undefined) {
-      idCount[attr.block_id] = { count: 0, attrs: [] };
-    }
-    idCount[attr.block_id].count += 1;
-    idCount[attr.block_id].attrs.push(attr);
+async function exprEval(exprAttr: attribute) {
+  const evalValue = await eval(exprAttr.value);
+  // const updateRes = await updateBlock("markdown", String(evalValue), exprAttr.block_id);
+  const updateRes = await setBlockAttrs(exprAttr.block_id, {
+    [exprValueName]: String(evalValue),
   });
-  return Object.keys(idCount)
-    .filter((block_id: string) => idCount[block_id].count === 1)
-    .map((block_id: string) => idCount[block_id].attrs[0]);
+  dev(exprAttr, updateRes, evalValue);
 }
+
 async function exprBlockInit(block: Block) {
   await setBlockAttrs(block.id, {
     [exprName]: block.content,
