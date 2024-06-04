@@ -1,5 +1,5 @@
 import { Plugin } from "siyuan";
-import { setBlockAttrs, sql, updateBlock } from "./api";
+import { sql, updateBlock } from "./api";
 import "./index.css";
 
 /** 用于控制插件属性显示 */
@@ -58,28 +58,38 @@ async function updateExprEval() {
 
 async function exprEval(block: MergedBlock) {
   const evalValue = await eval(block.a_value);
-  /** 将求值结果存储到属性中 */
-  setBlockAttrs(block.id, {
-    [exprValueName]: String(evalValue),
-  });
 
   const updated = generateTimestamp();
   if (Number(updated) > Expr.updated) {
     Expr.updated = Number(updated);
   }
-  /** 更新块的update时间戳 */
-  const newKramdownAttr = block.ial!.replace(/updated="\d+"/, `updated="${updated}"`);
-
+  /** TODO,这里应该要考虑ial中不存在相关字段的情况，需要进行添加而非替换 更新块的update时间戳
+   * ial = `{: updated="20240604233920" custom-expr="10-11+Math.random()+&quot;2&quot;" custom-expr-value="-0.95897021536132312" id="20240514180539-3zvaoab" style="background-color: var(--b3-font-background4);"} `
+   */
+  let newKramdownAttr = block.ial!;
+  if (/updated="\d+"/.test(newKramdownAttr)) {
+    newKramdownAttr = newKramdownAttr.replace(/updated="\d+"/, `updated="${updated}"`);
+  } else {
+    newKramdownAttr = newKramdownAttr.replace(/}$/, ` updated="${updated}"`);
+  }
+  if (/custom-expr-value=".*?"/.test(newKramdownAttr)) {
+    newKramdownAttr = newKramdownAttr.replace(
+      /custom-expr-value=".*?"/,
+      `custom-expr-value="${encodeHTML(String(evalValue))}"`,
+    );
+  } else {
+    newKramdownAttr = newKramdownAttr.replace(
+      /}$/,
+      ` custom-expr-value="${encodeHTML(String(evalValue))}"`,
+    );
+  }
+  // custom-expr-value="-0.56273369360008952"
   /** 将求值结果更新到块文本 */
   await updateBlock("markdown", String(evalValue + "\n" + newKramdownAttr), block.id);
   dev(newKramdownAttr, Expr.updated);
 }
 
-async function exprBlockInit(block: Block) {
-  await setBlockAttrs(block.id, {
-    [exprName]: block.content,
-  });
-}
+
 
 async function getBlockByID(blockId: string): Promise<Block> {
   let sqlScript = `select * from blocks where id ='${blockId}'`;
@@ -98,4 +108,16 @@ function generateTimestamp() {
   ]
     .map((part) => part.toString().padStart(2, "0"))
     .join("");
+}
+function encodeHTML(str: string) {
+  return str.replace(/[&<>"'\n]/g, function (match) {
+    return {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+      "\n": "_esc_newline_",
+    }[match]!;
+  });
 }
