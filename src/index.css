@@ -7,9 +7,9 @@
   font-family: monospace;
   font-size: x-small;
 }
-.expr-plugin [custom-expr-value]::after {
+/* .expr-plugin [custom-expr-value]::after {
   content: attr(custom-expr-value);
   background-color: #d25656;
   padding: 1px;
   font-family: monospace;
-}
+} */

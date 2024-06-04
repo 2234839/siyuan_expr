@@ -1,5 +1,5 @@
 import { Plugin } from "siyuan";
-import { setBlockAttrs, sql, updateBlock } from "./api";
+import { getBlockKramdown, setBlockAttrs, sql, updateBlock } from "./api";
 import "./index.css";
 
 /** 用于控制插件属性显示 */
@@ -12,13 +12,8 @@ const dev = console.log;
 export default class expr extends Plugin {
   IntervalId = 0;
   async onload() {
+    this.IntervalId = setInterval(updateExprEval, 5_000);
     this.onunloadFn.push(() => clearInterval(this.IntervalId));
-    const exprAttr: attribute[] = await sql(
-      /** 查询所有 'expr' 书签 or name = "custom-expr" 的属性 */
-      `SELECT * FROM attributes WHERE name = "${exprName}"`,
-    );
-    console.log(exprAttr);
-    exprAttr.forEach(exprEval);
 
     document.body.classList.add(pluginClassName);
     this.onunloadFn.push(() => document.body.classList.remove(pluginClassName));
@@ -30,13 +25,33 @@ export default class expr extends Plugin {
     this.onunloadFn.forEach((fn) => fn());
   }
 }
+/** 对最近更新过的表达式进行求值 */
+async function updateExprEval() {
+  const exprAttr: attribute[] = await sql(
+    /** 查询所有 'expr' 书签 or name = "custom-expr" 的属性 */
+    `SELECT * FROM attributes WHERE name = "${exprName}"`,
+  );
+  console.log(exprAttr);
+  exprAttr.forEach(exprEval);
+}
 async function exprEval(exprAttr: attribute) {
   const evalValue = await eval(exprAttr.value);
-  // const updateRes = await updateBlock("markdown", String(evalValue), exprAttr.block_id);
-  const updateRes = await setBlockAttrs(exprAttr.block_id, {
+  /** 将求值结果存储到属性中 */
+  setBlockAttrs(exprAttr.block_id, {
     [exprValueName]: String(evalValue),
   });
-  dev(exprAttr, updateRes, evalValue);
+  const Kramdown = await getBlockKramdown(exprAttr.block_id);
+  const KramdownRows = Kramdown.kramdown.split("\n");
+  const KramdownAttr = KramdownRows.pop();
+
+  /** 块原本的内容 */
+  const markdown = KramdownRows.join("\n");
+  /** 将求值结果更新到块文本 */
+  await updateBlock(
+    "markdown",
+    String(evalValue + "\n" + KramdownAttr),
+    exprAttr.block_id,
+  );
 }
 
 async function exprBlockInit(block: Block) {
