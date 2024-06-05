@@ -24,7 +24,7 @@
     "vite-plugin-zip-pack": "^1.2.3"
   },
   "dependencies": {
-    "@llej/js_util": "github:2234839/ts-util"
+    "@llej/js_util": "^1.0.8"
   },
   "url": "https://github.com/2234839/siyuan_expr"
 }
