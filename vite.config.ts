@@ -47,10 +47,10 @@ export default defineConfig({
           src: "./plugin.json",
           dest: "./",
         },
-        {
-          src: "./src/i18n/**",
-          dest: "./i18n/",
-        },
+        // {
+        //   src: "./src/i18n/**",
+        //   dest: "./i18n/",
+        // },
       ],
     }),
   ],
@@ -93,7 +93,7 @@ export default defineConfig({
                 //监听静态资源文件
                 name: "watch-external",
                 async buildStart() {
-                  const files = await fg(["src/i18n/*.json","./plugin.json"]);
+                  const files = await fg(["./plugin.json"]);
                   for (let file of files) {
                     this.addWatchFile(file);
                   }
