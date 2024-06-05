@@ -6,11 +6,11 @@ import livereload from "rollup-plugin-livereload";
 import zipPack from "vite-plugin-zip-pack";
 import fg from "fast-glob";
 import { siyuan } from "@llej/js_util";
-/** 自动更新plugin.json */
 import { writeFile } from "fs/promises";
+
 import pluginJSON from "./plugin.json";
 import pkg from "./package.json";
-
+/** 自动更新plugin.json */
 writeFile("./plugin.json", JSON.stringify(siyuan.mergePluginPackage(pkg, pluginJSON), null, 2));
 
 const args = minimist(process.argv.slice(2));
@@ -93,7 +93,7 @@ export default defineConfig({
                 //监听静态资源文件
                 name: "watch-external",
                 async buildStart() {
-                  const files = await fg(["src/i18n/*.json", "./README*.md", "./plugin.json"]);
+                  const files = await fg(["src/i18n/*.json","./plugin.json"]);
                   for (let file of files) {
                     this.addWatchFile(file);
                   }
@@ -121,7 +121,7 @@ export default defineConfig({
           }
           return assetInfo.name!;
         },
-        //TODO 这里使用伺服模式有问题，但我不知道如何解决,反正这个功能也基本就开发者使用，就这样吧。
+        //TODO 这里在非localhost下有问题，但我不知道如何解决,反正这个功能也基本就开发者使用，就这样吧。
         sourcemapBaseUrl: `http://localhost:6806/plugins/${pluginJSON.name}/`,
         sourcemapPathTransform: (sourcePath) => {
           return `${pluginJSON.name}/${sourcePath}`;

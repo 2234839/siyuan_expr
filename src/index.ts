@@ -13,38 +13,42 @@ type MergedBlock = aliasAttribute & Block;
 
 const dev = console.log;
 declare global {
-  var Expr: Expr;
+  var expr: Expr;
 }
 export default class Expr extends Plugin {
   IntervalId = 0;
+  /** 主循环的间隔毫秒数 */
+  intervalMs = 1_000;
   /** 只更新这个时间戳以后的表达式 */
   updated = 0;
   /** 为 true 代表正在进行求值运算中 */
   evalState = false;
   async onload() {
-    globalThis.Expr = this;
-    this.onunloadFn.push(() => {
-      //@ts-ignore
-      delete globalThis.Expr;
-    });
+    /** 注册Expr实例到全局变量 */
+    globalThis.expr = this;
+    this.onunloadFn.push(
+      () =>
+        //@ts-ignore
+        delete globalThis.expr,
+    );
 
-    const updateExprEval = this.updateExprEval.bind(this);
-    this.IntervalId = setInterval(updateExprEval, 1_000);
-    updateExprEval();
+    /** 注册求值循环 */
+    this.IntervalId = setInterval(this.evalAllExpr.bind(this), this.intervalMs);
     this.onunloadFn.push(() => clearInterval(this.IntervalId));
 
+    /** 在 body 上注册插件类名，用于控制样式的开关 */
     document.body.classList.add(pluginClassName);
     this.onunloadFn.push(() => document.body.classList.remove(pluginClassName));
   }
 
+  /** 插件卸载时会执行此数组中的函数 */
   onunloadFn = [] as (() => void)[];
   async onunload() {
-    dev("expr plugin unload");
     this.onunloadFn.forEach((fn) => fn());
   }
 
-  /** 对最近更新过的表达式进行求值 */
-  async updateExprEval() {
+  /** 对所有表达式进行求值 */
+  async evalAllExpr() {
     if (this.evalState) {
       /** 只有上一轮求值计算进行完毕后才会开始新一轮计算 */
       return;
@@ -60,7 +64,6 @@ export default class Expr extends Plugin {
       ORDER BY b.updated DESC;`,
       );
       if (exprAttr.length > 0) {
-        console.log(exprAttr, this.updated);
         await Promise.all(exprAttr.map(this.exprEval.bind(this)));
       }
     } catch (error) {
@@ -100,7 +103,7 @@ export default class Expr extends Plugin {
     // custom-expr-value="-0.56273369360008952"
     /** 将求值结果更新到块文本 */
     await updateBlock("markdown", String(evalValue + "\n" + newKramdownAttr), block.id);
-    dev(newKramdownAttr, this.updated);
+    dev(block.id,block.a_value, evalValue);
   }
 }
 
