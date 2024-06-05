@@ -1,11 +1,11 @@
 {
   "name": "expr",
-  "version": "0.2.3",
+  "version": "0.0.1",
   "type": "module",
   "description": "",
-  "repository": "",
+  "repository": "https://github.com/2234839/siyuan_expr",
   "homepage": "",
-  "author": "",
+  "author": "崮生_子虚",
   "license": "GPL-3.0",
   "scripts": {
     "make-link": "node --no-warnings ./scripts/make_dev_link.js",
@@ -14,7 +14,6 @@
   },
   "devDependencies": {
     "fast-glob": "^3.3.2",
-    "glob": "^7.2.3",
     "minimist": "^1.2.8",
     "rollup-plugin-livereload": "^2.0.5",
     "siyuan": "0.8.3",
@@ -25,6 +24,6 @@
     "vite-plugin-zip-pack": "^1.2.3"
   },
   "dependencies": {
-    "@llej/js_util":"github:2234839/ts-util"
+    "@llej/js_util": "^1.0.8"
   }
 }
