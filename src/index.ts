@@ -97,13 +97,13 @@ export default class Expr extends Plugin {
     } else {
       newKramdownAttr = newKramdownAttr.replace(
         /}$/,
-        ` custom-expr-value="${encodeHTML(String(evalValue))}"`,
+        ` custom-expr-value="${encodeHTML(String(evalValue))}"` + "}",
       );
     }
     // custom-expr-value="-0.56273369360008952"
     /** 将求值结果更新到块文本 */
     await updateBlock("markdown", String(evalValue + "\n" + newKramdownAttr), block.id);
-    dev(block.id,block.a_value, evalValue);
+    dev(block.id, block.a_value, evalValue);
   }
 }
 
