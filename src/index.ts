@@ -23,6 +23,7 @@ export default class Expr extends Plugin {
   updated = 0;
   /** 为 true 代表正在进行求值运算中 */
   evalState = false;
+
   async onload() {
     /** 注册Expr实例到全局变量 */
     globalThis.expr = this;
@@ -31,6 +32,11 @@ export default class Expr extends Plugin {
         //@ts-ignore
         delete globalThis.expr,
     );
+
+    // 切换页签时清空已计算的id数组来实现每次打开自动计算
+    this.eventBus.on("switch-protyle", () => {
+      this.evalExprIDs = [];
+    });
 
     /** 注册求值循环 */
     this.IntervalId = setInterval(this.evalAllExpr.bind(this), this.intervalMs);
@@ -53,6 +59,24 @@ export default class Expr extends Plugin {
       /** 只有上一轮求值计算进行完毕后才会开始新一轮计算 */
       return;
     }
+    const exprIDs = (
+      [...document.querySelectorAll("[custom-expr]")].filter((el) => {
+        if (!(el instanceof HTMLElement)) {
+          return false;
+        }
+        if (el.dataset.nodeId && this.evalExprIDs.includes(el.dataset.nodeId)) {
+          // 已经求值过了
+          return false;
+        }
+        return true;
+      }) as HTMLElement[]
+    ).map((el) => {
+      const id = el.dataset.nodeId as string;
+      return id;
+    });
+
+    const exprIDsStr = exprIDs.map((id) => `"${id}"`).join(",");
+
     try {
       this.evalState = true;
       const exprAttr: MergedBlock[] = await sql(
@@ -60,7 +84,14 @@ export default class Expr extends Plugin {
       FROM blocks AS  b
       INNER JOIN attributes AS a
       ON b.id = a.block_id
-      WHERE a.name = "${exprName}" and CAST(b.updated AS INTEGER)  > ${this.updated}
+      WHERE
+          a.name = "${exprName}"
+        AND
+          (
+            ( b.id IN (${exprIDsStr}) )
+              OR
+            (CAST(b.updated AS INTEGER)  > ${this.updated})
+          )
       ORDER BY b.updated DESC;`,
       );
       if (exprAttr.length > 0) {
@@ -70,9 +101,10 @@ export default class Expr extends Plugin {
       dev("求值错误", error);
     } finally {
       this.evalState = false;
+      this.evalExprIDs.push(...exprIDs);
     }
   }
-
+  evalExprIDs: string[] = [];
   async exprEval(block: MergedBlock) {
     const evalValue = await eval(block.a_value);
 
@@ -103,7 +135,7 @@ export default class Expr extends Plugin {
     // custom-expr-value="-0.56273369360008952"
     /** 将求值结果更新到块文本 */
     await updateBlock("markdown", String(evalValue + "\n" + newKramdownAttr), block.id);
-    dev(block.id, block.a_value, evalValue);
+    dev("expr:", block.id, block.a_value, evalValue);
   }
 }
 
