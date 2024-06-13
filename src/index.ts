@@ -21,14 +21,18 @@ export default class Expr extends Plugin {
   IntervalId = 0;
   /** 主循环的间隔毫秒数 */
   intervalMs = 1_000;
-  /** 控制sql相关 */
+  /** 控制sql相关 TODO 添加选项配置 */
   intervalUpdateSql = siyuan.bindData({
     initValue: true,
     that: this,
     storageName: "intervalUpdateSql.json",
   });
   /** 只更新这个时间戳以后的表达式 */
-  updated = 0;
+  updated = siyuan.bindData({
+    initValue: 0,
+    that: this,
+    storageName: "updated.json",
+  });
   /** 为 true 代表正在进行求值运算中 */
   evalState = false;
 
@@ -94,7 +98,7 @@ export default class Expr extends Plugin {
 
     try {
       this.evalState = true;
-      const exprAttr: MergedBlock[] = await sql(
+      const exprBlock = (await sql(
         `SELECT b.*,a.id AS a_id,a."name" AS a_name,a."value" as a_value,a."type" AS a_type,a.block_id AS a_block_id,a.root_id AS a_root_id,a.box AS a_box,a."path" AS a_path
       FROM blocks AS  b
       INNER JOIN attributes AS a
@@ -105,27 +109,28 @@ export default class Expr extends Plugin {
           (
             ( b.id IN (${exprIDsStr}) )
               OR
-            (CAST(b.updated AS INTEGER)  > ${this.updated})
+            (CAST(b.updated AS INTEGER)  > ${this.updated.value()})
           )
       ORDER BY b.updated DESC;`,
-      );
-      if (exprAttr.length > 0) {
-        await Promise.all(exprAttr.map(this.exprEval.bind(this)));
+      )) as MergedBlock[] | null;
+
+      if (exprBlock && exprBlock.length > 0) {
+        await Promise.all(exprBlock.map(this.exprEval.bind(this)));
       }
     } catch (error) {
       dev("求值错误", error);
     } finally {
       this.evalState = false;
-      this.evalExprIDs.push(...exprIDs);
     }
   }
+  /** 记录计算完成的 id ，不再计算 */
   evalExprIDs: string[] = [];
   async exprEval(block: MergedBlock) {
     const evalValue = await eval(block.a_value);
 
     const updated = generateTimestamp();
-    if (Number(updated) > this.updated) {
-      this.updated = Number(updated);
+    if (Number(updated) > this.updated.value()) {
+      this.updated.set(Number(updated));
     }
     /** TODO,这里应该要考虑ial中不存在相关字段的情况，需要进行添加而非替换 更新块的update时间戳
      * ial = `{: updated="20240604233920" custom-expr="10-11+Math.random()+&quot;2&quot;" custom-expr-value="-0.95897021536132312" id="20240514180539-3zvaoab" style="background-color: var(--b3-font-background4);"} `
@@ -151,6 +156,8 @@ export default class Expr extends Plugin {
     /** 将求值结果更新到块文本 */
     await updateBlock("markdown", String(evalValue + "\n" + newKramdownAttr), block.id);
     dev("expr:", block.id, block.a_value, evalValue);
+
+    this.evalExprIDs.push(block.id);
   }
 }
 
