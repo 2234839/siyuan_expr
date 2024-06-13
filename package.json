@@ -16,7 +16,7 @@
     "fast-glob": "^3.3.2",
     "minimist": "^1.2.8",
     "rollup-plugin-livereload": "^2.0.5",
-    "siyuan": "^1.0.2 ",
+    "siyuan": "^1.0.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5",
     "vite": "^4.5.3",
@@ -24,6 +24,6 @@
     "vite-plugin-zip-pack": "^1.2.3"
   },
   "dependencies": {
-    "@llej/js_util": "^1.0.9"
+    "@llej/js_util": "^1.0.10"
   }
 }

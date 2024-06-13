@@ -1,6 +1,7 @@
 import { Plugin } from "siyuan";
 import { sql, updateBlock } from "./api";
 import "./index.css";
+import { siyuan } from "@llej/js_util";
 
 /** 用于控制插件属性显示 */
 const pluginClassName = "expr-plugin";
@@ -15,16 +16,25 @@ const dev = console.log;
 declare global {
   var expr: Expr;
 }
+
 export default class Expr extends Plugin {
   IntervalId = 0;
   /** 主循环的间隔毫秒数 */
   intervalMs = 1_000;
+  /** 控制sql相关 */
+  intervalUpdateSql = siyuan.bindData({
+    initValue: true,
+    that: this,
+    storageName: "intervalUpdateSql.json",
+  });
   /** 只更新这个时间戳以后的表达式 */
   updated = 0;
   /** 为 true 代表正在进行求值运算中 */
   evalState = false;
 
   async onload() {
+    console.log("[expr]", this);
+
     /** 注册Expr实例到全局变量 */
     globalThis.expr = this;
     this.onunloadFn.push(
@@ -65,7 +75,7 @@ export default class Expr extends Plugin {
           return false;
         }
         if (el.dataset.nodeId && this.evalExprIDs.includes(el.dataset.nodeId)) {
-          // 已经求值过了
+          // 已经求值过了的不在参加计算
           return false;
         }
         return true;
@@ -74,6 +84,11 @@ export default class Expr extends Plugin {
       const id = el.dataset.nodeId as string;
       return id;
     });
+
+    // 当配置不根据update字段更新的时候，不进行求值
+    if (!this.intervalUpdateSql.value() && exprIDs.length === 0) {
+      return;
+    }
 
     const exprIDsStr = exprIDs.map((id) => `"${id}"`).join(",");
 
