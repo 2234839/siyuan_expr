@@ -1,7 +1,7 @@
 import { Plugin } from "siyuan";
-import { sql, updateBlock } from "./api";
 import "./index.css";
 import { siyuan } from "@llej/js_util";
+import { sql, updateBlock } from "~/libs/api";
 
 /** 用于控制插件属性显示 */
 const pluginClassName = "expr-plugin";
@@ -141,20 +141,21 @@ export default class Expr extends Plugin {
     } else {
       newKramdownAttr = newKramdownAttr.replace(/}$/, ` updated="${updated}"`);
     }
+    const evalValue_string = String(evalValue);
     if (/custom-expr-value=".*?"/.test(newKramdownAttr)) {
       newKramdownAttr = newKramdownAttr.replace(
         /custom-expr-value=".*?"/,
-        `custom-expr-value="${encodeHTML(String(evalValue))}"`,
+        `custom-expr-value="${encodeHTML(evalValue_string)}"`,
       );
     } else {
       newKramdownAttr = newKramdownAttr.replace(
         /}$/,
-        ` custom-expr-value="${encodeHTML(String(evalValue))}"` + "}",
+        ` custom-expr-value="${encodeHTML(evalValue_string)}"` + "}",
       );
     }
     // custom-expr-value="-0.56273369360008952"
     /** 将求值结果更新到块文本 */
-    await updateBlock("markdown", String(evalValue + "\n" + newKramdownAttr), block.id);
+    await updateBlock("markdown", String(evalValue_string + "\n" + newKramdownAttr), block.id);
     dev("expr:", block.id, block.a_value, evalValue);
 
     this.evalExprIDs.push(block.id);
