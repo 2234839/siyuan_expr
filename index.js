@@ -17155,9 +17155,45 @@ function requirePrinter() {
     });
   }
 })(main$1);
+function generateTimestamp() {
+  const now = /* @__PURE__ */ new Date();
+  return [
+    now.getFullYear(),
+    now.getMonth() + 1,
+    now.getDate(),
+    now.getHours(),
+    now.getMinutes(),
+    now.getSeconds()
+  ].map((part) => part.toString().padStart(2, "0")).join("");
+}
+function encodeHTML(str) {
+  return str.replace(/[&<>"'\n]/g, function(match) {
+    return {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+      "\n": "_esc_newline_"
+    }[match];
+  });
+}
 const { Plugin } = require("siyuan");
+class SiyuanPlugin extends Plugin {
+  constructor() {
+    super(...arguments);
+    __publicField(this, "onunloadFn", []);
+  }
+  // 在 unload 时执行注册的函数
+  addUnloadFn(fn) {
+    this.onunloadFn.push(fn);
+  }
+  onunload() {
+    this.onunloadFn.forEach((fn) => fn());
+  }
+}
 const dev = console.log;
-class Expr extends Plugin {
+class Expr extends SiyuanPlugin {
   constructor() {
     super(...arguments);
     __publicField(this, "IntervalId", 0);
@@ -17177,15 +17213,13 @@ class Expr extends Plugin {
     }));
     /** 为 true 代表正在进行求值运算中 */
     __publicField(this, "evalState", false);
-    /** 插件卸载时会执行此数组中的函数 */
-    __publicField(this, "onunloadFn", []);
     /** 记录计算完成的 id ，不再计算 */
     __publicField(this, "evalExprIDs", []);
   }
   async onload() {
     console.log("[expr]", this);
     globalThis.expr = this;
-    this.onunloadFn.push(
+    this.addUnloadFn(
       () => (
         //@ts-ignore
         delete globalThis.expr
@@ -17195,12 +17229,9 @@ class Expr extends Plugin {
       this.evalExprIDs = [];
     });
     this.IntervalId = setInterval(this.evalAllExpr.bind(this), this.intervalMs);
-    this.onunloadFn.push(() => clearInterval(this.IntervalId));
+    this.addUnloadFn(() => clearInterval(this.IntervalId));
     document.body.classList.add(pluginClassName);
-    this.onunloadFn.push(() => document.body.classList.remove(pluginClassName));
-  }
-  async onunload() {
-    this.onunloadFn.forEach((fn) => fn());
+    this.addUnloadFn(() => document.body.classList.remove(pluginClassName));
   }
   /** 对所有表达式进行求值 */
   async evalAllExpr() {
@@ -17282,29 +17313,6 @@ ${block.a_value}
     this.evalExprIDs.push(block.id);
     return evalValue;
   }
-}
-function generateTimestamp() {
-  const now = /* @__PURE__ */ new Date();
-  return [
-    now.getFullYear(),
-    now.getMonth() + 1,
-    now.getDate(),
-    now.getHours(),
-    now.getMinutes(),
-    now.getSeconds()
-  ].map((part) => part.toString().padStart(2, "0")).join("");
-}
-function encodeHTML(str) {
-  return str.replace(/[&<>"'\n]/g, function(match) {
-    return {
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;",
-      "\n": "_esc_newline_"
-    }[match];
-  });
 }
 module.exports = Expr;
 //# sourceMappingURL=index.js.map
